@@ -1,0 +1,52 @@
+[package]
+name = "zig-cc"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "zig-ar"
+path = "src/zig-ar.rs"
+
+[[bin]]
+name = "zig-cc"
+path = "src/zig-cc.rs"
+
+[[bin]]
+name = "zig-cpp"
+path = "src/zig-cpp.rs"
+
+[[bin]]
+name = "zig-cppfilt"
+path = "src/zig-cppfilt.rs"
+
+[[bin]]
+name = "zig-dlltool"
+path = "src/zig-dlltool.rs"
+
+[[bin]]
+name = "zig-lib"
+path = "src/zig-lib.rs"
+
+[[bin]]
+name = "zig-objcopy"
+path = "src/zig-objcopy.rs"
+
+[[bin]]
+name = "zig-objdump"
+path = "src/zig-objdump.rs"
+
+[[bin]]
+name = "zig-runlib"
+path = "src/zig-runlib.rs"
+
+[[bin]]
+name = "zig-size"
+path = "src/zig-size.rs"
+
+[dependencies]
+anyhow = "1"
+toml = "0.5"
+serde = { version = "1.0", features = ["derive"] }
+fs-err = "2.7"

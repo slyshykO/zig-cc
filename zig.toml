@@ -1,0 +1,6 @@
+
+zig = "Path/to/zig"
+c_options = []
+cpp_options = []
+tools_options = []
+trace = false
