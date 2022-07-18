@@ -34,22 +34,20 @@ impl Config {
 
 pub fn config_path() -> anyhow::Result<String> {
     let exe = std::env::current_exe()?;
-    let dir = exe.parent().ok_or(anyhow::anyhow!(
-        "Can't get parent directory from `{:?}`",
-        exe
-    ))?;
+    let dir = exe
+        .parent()
+        .ok_or_else(|| anyhow::anyhow!("Can't get parent directory from `{:?}`", exe))?;
     let res = dir.join(ZIG_CONF_PATH);
     Ok(res
         .to_str()
-        .ok_or(anyhow::anyhow!("Can't convert to String: `{:?}`", res))?
+        .ok_or_else(|| anyhow::anyhow!("Can't convert to String: `{:?}`", res))?
         .into())
 }
 
 pub fn tool_trace_file(tool: &str) -> anyhow::Result<std::path::PathBuf> {
     let exe = std::env::current_exe()?;
-    let dir = exe.parent().ok_or(anyhow::anyhow!(
-        "Can't get parent directory from `{:?}`",
-        exe
-    ))?;
+    let dir = exe
+        .parent()
+        .ok_or_else(|| anyhow::anyhow!("Can't get parent directory from `{:?}`", exe))?;
     Ok(dir.join(format!("trace-{}.txt", tool)))
 }
