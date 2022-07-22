@@ -2,9 +2,18 @@ use crate::config::config_path;
 use crate::config::Config;
 
 use fs_err::OpenOptions;
+use std::ffi::{OsStr, OsString};
 use std::io::{Read, Write};
 use std::process::{Command, Stdio};
 use std::sync::{atomic::AtomicBool, Arc};
+
+const MIN_MAIN_CPP: &str = r#"
+int main(int argc, char** argv) {
+    return 0;
+    (void)argc;
+    (void)argv;
+}
+"#;
 
 enum OutType {
     Stdout,
@@ -86,7 +95,7 @@ struct TraceData<'td> {
     stderr: &'td Vec<u8>,
 }
 
-fn save_trace<'td>(log_file: &std::path::Path, td: TraceData<'td>) -> anyhow::Result<()> {
+fn save_trace(log_file: &std::path::Path, td: TraceData<'_>) -> anyhow::Result<()> {
     let mut trace_file = OpenOptions::new()
         .write(true)
         .append(true)
@@ -113,11 +122,38 @@ fn save_trace<'td>(log_file: &std::path::Path, td: TraceData<'td>) -> anyhow::Re
     Ok(())
 }
 
+fn tmpname(prefix: &OsStr, suffix: &OsStr, rand_len: usize) -> OsString {
+    let mut buf = OsString::with_capacity(prefix.len() + suffix.len() + rand_len);
+    buf.push(prefix);
+    let mut char_buf = [0u8; 4];
+    for c in std::iter::repeat_with(fastrand::alphanumeric).take(rand_len) {
+        buf.push(c.encode_utf8(&mut char_buf));
+    }
+    buf.push(suffix);
+    buf
+}
+
+fn make_tmp_main_cpp() -> anyhow::Result<(String, String)> {
+    let tmp = std::env::temp_dir();
+    let tmp_main = tmp.join(tmpname(OsStr::new("zig-cc-"), OsStr::new(".cpp"), 5));
+    let tmp_obj = tmp.join(tmpname(OsStr::new("zig-cc-"), OsStr::new(".obj"), 5));
+    OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(&tmp_main)?
+        .write_all(MIN_MAIN_CPP.as_bytes())?;
+
+    Ok((
+        tmp_main.display().to_string(),
+        tmp_obj.display().to_string(),
+    ))
+}
+
 fn run_zig(
     zig: &str,
     tool: &str,
-    args0: &Vec<String>,
-    args1: &Vec<String>,
+    args0: &[String],
+    args1: &[String],
     trace: bool,
 ) -> anyhow::Result<i32> {
     let print_search_dir = args0.contains(&"-print-search-dirs".to_string())
@@ -142,41 +178,43 @@ fn run_zig(
 
     let track_stdin = false;
 
+    let (tmp_main, tmp_obj) = make_tmp_main_cpp()?;
+
+    defer_lite::defer!({
+        let _ = std::fs::remove_file(&tmp_main);
+        let _ = std::fs::remove_file(&tmp_obj);
+    });
+
     let mut args: Vec<String> = Vec::new();
 
     if tool == "cc" || tool == "c++" {
-        args.extend(args0.clone());
+        args.extend_from_slice(args0);
         for arg in args1 {
-            if (arg == "-" || arg == "nul") && !args.iter().any(|x| x == "-dM") {
-                args.push("-c".to_string());
-                args.push(format!("{}", dir.join("cc.cpp").display()));
-                args.push("-o".to_string());
-                args.push(format!(
-                    "{}-{}.obj",
-                    dir.join("cc.cpp").display(),
-                    std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap_or_default()
-                        .as_millis()
-                ));
-            } else if (arg == "-" || arg == "nul") && args.iter().any(|x| x == "-dM") {
-                args.push(format!("{}", dir.join("cc.cpp").display()));
+            if arg == "-" || arg == "nul" {
+                if args.iter().any(|x| x == "-dM") {
+                    args.push(tmp_main.clone())
+                } else {
+                    args.push("-c".to_string());
+                    args.push(tmp_main.clone());
+                    args.push("-o".to_string());
+                    args.push(tmp_obj.clone());
+                }
             } else {
                 args.push(arg.clone());
             }
         }
     } else {
-        args.extend(args0.clone());
-        args.extend(args1.clone());
+        args.extend_from_slice(args0);
+        args.extend_from_slice(args1);
     }
 
     let cmd = format!("{} {} {}", zig, tool, args.join(" "));
     // print!("{}", cmd);
 
-    let path = std::env::var("PATH").unwrap_or("Error getting PATH".to_string());
+    let path = std::env::var("PATH").unwrap_or_else(|e| format!("Error:{}", e));
     let zig_dir = std::path::Path::new(zig)
         .parent()
-        .unwrap_or(std::path::Path::new("."))
+        .unwrap_or_else(|| std::path::Path::new("."))
         .display()
         .to_string();
     let path_sep = if cfg!(windows) { ";" } else { ":" };
