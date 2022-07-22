@@ -158,6 +158,8 @@ fn run_zig(
 ) -> anyhow::Result<i32> {
     let print_search_dir = args0.contains(&"-print-search-dirs".to_string())
         || args1.contains(&"-print-search-dirs".to_string());
+    let print_zig_version =
+        args0.contains(&"-version".to_string()) || args1.contains(&"-version".to_string());
 
     let dir = std::env::current_exe()?
         .parent()
@@ -170,7 +172,10 @@ fn run_zig(
         }
     };
 
-    let cwd = if print_search_dir || (cd.contains("QtCreator") && cd.contains("bin")) {
+    let cwd = if print_search_dir
+        || (cd.contains("QtCreator") && cd.contains("bin"))
+        || print_zig_version
+    {
         dir.display().to_string()
     } else {
         cd
