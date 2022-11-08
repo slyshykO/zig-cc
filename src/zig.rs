@@ -346,7 +346,7 @@ pub(crate) fn zig_tool<S: AsRef<str>>(tool: S) -> anyhow::Result<i32> {
     run_zig(
         &config.zig,
         tool.as_ref(),
-        &config.cpp_options,
+        &config.tools_options,
         &args,
         config.trace,
     )

@@ -38,8 +38,8 @@ name = "zig-objdump"
 path = "src/zig-objdump.rs"
 
 [[bin]]
-name = "zig-runlib"
-path = "src/zig-runlib.rs"
+name = "zig-ranlib"
+path = "src/zig-ranlib.rs"
 
 [[bin]]
 name = "zig-size"
