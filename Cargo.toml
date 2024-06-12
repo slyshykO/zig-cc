@@ -47,7 +47,7 @@ path = "src/zig-size.rs"
 
 [dependencies]
 anyhow = "1"
-toml = "0.7"
+toml = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 fs-err = "2.9"
 fastrand = "2"
@@ -56,3 +56,4 @@ defer-lite = "1"
 [profile.release]
 lto = true
 opt-level = "s"
+strip = "debuginfo"
